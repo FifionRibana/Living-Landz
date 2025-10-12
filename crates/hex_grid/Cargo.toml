@@ -1,0 +1,12 @@
+[package]
+name = "hex_grid"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+shared = { path = "../shared" }
+
+hexx = { workspace = true }
+serde = { workspace = true }
+glam = { workspace = true }
+rand = { workspace = true }

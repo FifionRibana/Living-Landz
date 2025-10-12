@@ -1,0 +1,13 @@
+{
+    "rust-analyzer.cargo.features": ["dev"],
+    "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.cargo.allTargets": false,
+    "rust-analyzer.linkedProjects": [
+        "./crates/client/Cargo.toml",
+        "./crates/server/Cargo.toml"
+    ],
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "editor.formatOnSave": true
+    }
+}

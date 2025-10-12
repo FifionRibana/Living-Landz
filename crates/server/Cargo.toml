@@ -1,0 +1,28 @@
+[package]
+name = "server"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+
+[dependencies]
+shared = { path = "../shared" }
+hex_grid = { path = "../hex_grid" }
+
+legion = { workspace = true }
+tokio = { workspace = true }
+tungstenite = { workspace = true }
+bincode = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+sqlx = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Pour tokio-tungstenite
+futures = "0.3"
+tokio-tungstenite = "0.21"
