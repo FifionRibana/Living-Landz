@@ -26,3 +26,10 @@ thiserror = { workspace = true }
 # Pour tokio-tungstenite
 futures = "0.3"
 tokio-tungstenite = "0.21"
+
+dotenv = "0.15"
+noise = "0.9"
+image = "0.25"
+rayon = "1.10"
+
+bevy = { workspace = true, default-features = false, features = ["multi_threaded"] }

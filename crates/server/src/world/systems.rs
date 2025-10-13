@@ -1,49 +1,64 @@
-use legion::*;
-use crate::world::components::*;
+// =============================================================================
+// WORLD SYSTEMS
+// =============================================================================
 
-/// Système de production de ressources
-#[system]
-pub fn production(
-    #[resource] tick: &u64,
-    query: &mut Query<(&Building, &Position)>,
-) {
-    for (building, pos) in query.iter() {
-        // Production selon type de bâtiment
-        match building.building_type {
-            BuildingType::Farm => {
-                // Produire nourriture
-            },
-            BuildingType::Mine => {
-                // Extraire minerai
-            },
-            _ => {}
+use rayon::prelude::*;
+use super::{components::*, resources::*, generation::*};
+
+pub async fn generate_world_complete() {
+    tracing::info!("Starting world generation...");
+    let start = std::time::Instant::now();
+    
+    // Load maps
+    let maps = WorldMaps::load(
+        "assets/maps/test_island_heightmap.png",
+        "assets/maps/test_island_biomes.png",
+        "assets/maps/test_island_binary.png",
+        12345,
+    ).expect("Failed to load world maps");
+    
+    let config = maps.config.clone();
+    
+    // Connect DB
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost/living_landz".to_string());
+    
+    let pool = sqlx::PgPool::connect(&database_url)
+        .await
+        .expect("Failed to connect to database");
+    
+    let db = ChunkDatabase::new(pool);
+    db.init_schema().await.expect("Failed to init schema");
+    
+    // Generate chunks
+    let noise_gen = NoiseGenerator::new(config.seed);
+    let total_chunks = (config.chunks_x * config.chunks_y) as usize;
+    
+    tracing::info!("Generating {} chunks...", total_chunks);
+    
+    let chunks: Vec<Chunk> = (0..config.chunks_x as i32)
+        .flat_map(|x| {
+            (0..config.chunks_y as i32).map(move |y| ChunkCoord { x, y })
+        })
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|&coord| {
+            ChunkGenerator::generate(coord, &maps, &config, &noise_gen)
+        })
+        .collect();
+    
+    tracing::info!("✓ Generated {} chunks in {:?}", chunks.len(), start.elapsed());
+    
+    // Save to DB
+    let save_start = std::time::Instant::now();
+    for (i, chunk) in chunks.iter().enumerate() {
+        db.save_chunk(chunk).await.expect("Failed to save chunk");
+        
+        if (i + 1) % 50 == 0 || i + 1 == total_chunks {
+            tracing::info!("Progress: {}/{} chunks saved", i + 1, total_chunks);
         }
     }
-}
-
-/// Système de consommation (unités mangent)
-#[system]
-pub fn consumption(
-    #[resource] tick: &u64,
-    query: &mut Query<&mut Unit>,
-) {
-    for mut unit in query.iter_mut() {
-        // Consommer nourriture depuis inventaire
-        // Réduire bonheur si pas assez
-    }
-}
-
-/// Système de construction (avancement)
-#[system]
-pub fn construction(
-    #[resource] tick: &u64,
-    query: &mut Query<&mut Building>,
-) {
-    for mut building in query.iter_mut() {
-        if building.construction_progress < 1.0 {
-            // Avancer construction
-            building.construction_progress += 0.1; // 10% par tick
-            building.construction_progress = building.construction_progress.min(1.0);
-        }
-    }
+    
+    tracing::info!("✓ Saved all chunks in {:?}", save_start.elapsed());
+    tracing::info!("🎉 Complete! Total: {:?}", start.elapsed());
 }

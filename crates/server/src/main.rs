@@ -1,7 +1,6 @@
 // =============================================================================
 // CRATE SERVER - main.rs
 // =============================================================================
-// File: crates/server/src/main.rs
 
 use futures::{SinkExt, StreamExt};
 use std::collections::HashMap;
@@ -11,17 +10,30 @@ use rand::prelude::*;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 use tokio_tungstenite::{accept_async, tungstenite::Error, tungstenite::Message};
-// use tungstenite::protocol::Message;
 
 use hex_grid::WorldGenerator;
 use shared::{ChunkId, ClientMessage, ServerMessage};
+
+mod world;
+use world::*;
 
 type Sessions = Arc<RwLock<HashMap<u64, SocketAddr>>>;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
+    dotenv::dotenv().ok();
 
+    // Check if world generation needed
+    let args: Vec<String> = std::env::args().collect();
+    if args.contains(&"--generate-world".to_string()) {
+        tracing::info!("=== Starting World Generation ===");
+        world::systems::generate_world_complete().await;
+        tracing::info!("=== Generation Complete - Exiting ===");
+        return;
+    }
+
+    // Normal server startup
     let addr = "127.0.0.1:9001".to_string();
     let listener = TcpListener::bind(&addr).await.unwrap();
     tracing::info!("Server listening on: {}", addr);
@@ -29,7 +41,11 @@ async fn main() {
     let sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
     let world_gen = Arc::new(WorldGenerator::new(12345));
 
-    // Tick system (separate task)
+    // Initialize database connection
+    let db = initialize_database().await;
+    let db = Arc::new(db);
+
+    // Tick system
     let sessions_clone = sessions.clone();
     tokio::spawn(async move {
         let mut tick: u64 = 0;
@@ -38,7 +54,6 @@ async fn main() {
             tick += 1;
             tracing::info!("Tick {}", tick);
 
-            // Broadcast tick à tous les clients
             let msg = ServerMessage::WorldTick { tick };
             broadcast_message(&sessions_clone, msg).await;
         }
@@ -48,8 +63,26 @@ async fn main() {
     while let Ok((stream, addr)) = listener.accept().await {
         let sessions = sessions.clone();
         let world_gen = world_gen.clone();
-        tokio::spawn(handle_connection(stream, addr, sessions, world_gen));
+        let db = db.clone();
+        tokio::spawn(handle_connection(stream, addr, sessions, world_gen, db));
     }
+}
+
+async fn initialize_database() -> ChunkDatabase {
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost/living_landz".to_string());
+    
+    tracing::info!("Connecting to database at {}", database_url);
+    
+    let pool = sqlx::PgPool::connect(&database_url)
+        .await
+        .expect("Failed to connect to database");
+    
+    let db = ChunkDatabase::new(pool);
+    db.init_schema().await.expect("Failed to init schema");
+    
+    tracing::info!("✓ Database connected");
+    db
 }
 
 async fn handle_connection(
@@ -57,6 +90,7 @@ async fn handle_connection(
     addr: SocketAddr,
     sessions: Sessions,
     world_gen: Arc<WorldGenerator>,
+    db: Arc<ChunkDatabase>,
 ) {
     tracing::info!("New connection from {}", addr);
 
@@ -71,14 +105,18 @@ async fn handle_connection(
     let (mut write, mut read) = ws_stream.split();
     let player_id = rand::random::<u64>();
 
-    // Enregistrer session
     sessions.write().await.insert(player_id, addr);
 
     while let Some(msg) = read.next().await {
         match msg {
             Ok(Message::Binary(data)) => {
                 if let Ok(client_msg) = bincode::deserialize::<ClientMessage>(&data) {
-                    let response = handle_client_message(client_msg, player_id, &world_gen);
+                    let response = handle_client_message(
+                        client_msg, 
+                        player_id, 
+                        &world_gen,
+                        &db,
+                    ).await;
 
                     if let Ok(response_data) = bincode::serialize(&response) {
                         let _ = write.send(Message::Binary(response_data)).await;
@@ -94,15 +132,15 @@ async fn handle_connection(
         }
     }
 
-    // Cleanup
     sessions.write().await.remove(&player_id);
     tracing::info!("Connection closed: {}", addr);
 }
 
-fn handle_client_message(
+async fn handle_client_message(
     msg: ClientMessage,
     player_id: u64,
     world_gen: &WorldGenerator,
+    db: &ChunkDatabase,
 ) -> ServerMessage {
     match msg {
         ClientMessage::Login { username } => {
@@ -110,13 +148,34 @@ fn handle_client_message(
             ServerMessage::LoginSuccess { player_id }
         }
         ClientMessage::RequestChunks { chunk_ids } => {
-            // Pour démo, on renvoie le premier chunk
+            // Try loading from DB first
             if let Some(&chunk_id) = chunk_ids.first() {
-                let tiles = world_gen.generate_chunk(chunk_id);
-                ServerMessage::ChunkData { chunk_id, tiles }
-            } else {
-                ServerMessage::Pong // Fallback
+                let chunk_coord = ChunkCoord {
+                    x: chunk_id.x,
+                    y: chunk_id.y,
+                };
+                
+                match db.load_chunk(chunk_coord).await {
+                    Ok(Some(chunk)) => {
+                        // Return from DB
+                        return ServerMessage::ChunkData {
+                            chunk_id,
+                            tiles: chunk.tiles.iter().map(|t| shared::TileData {
+                                coord: t.coord,
+                                biome: t.biome,
+                                altitude: t.altitude,
+                                quality: t.quality,
+                            }).collect(),
+                        };
+                    }
+                    _ => {
+                        // Fallback: generate on-the-fly
+                        let tiles = world_gen.generate_chunk(chunk_id);
+                        return ServerMessage::ChunkData { chunk_id, tiles };
+                    }
+                }
             }
+            ServerMessage::Pong
         }
         ClientMessage::Ping => ServerMessage::Pong,
         _ => ServerMessage::Pong,

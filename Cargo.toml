@@ -51,7 +51,7 @@ thiserror = "1.0"
 anyhow = "1.0"
 
 # Hexagones - Version la plus récente
-hexx = { version = "0.19", features = ["serde"] }
+hexx = { version = "0.22", features = ["serde", "bevy", "algorithms"] }
 
 # Database (serveur)
 sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "postgres"] }

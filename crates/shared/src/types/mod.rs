@@ -6,6 +6,9 @@
 use hexx::Hex;
 use serde::{Deserialize, Serialize};
 
+pub mod resources;
+pub use resources::*;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct HexCoord {
     pub q: i32,
@@ -50,13 +53,29 @@ impl ChunkId {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum BiomeType {
     Ocean,
+    DeepOcean,
     Coast,
+    Beach,
     Grassland,
     Forest,
+    DenseForest,
     Mountain,
+    HighMountain,
     Desert,
     Tundra,
+    Taiga,
+    Swamp,
     Ice,
+}
+
+// Ajouter Profession (si pas déjà présent)
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Profession {
+    Farmer,
+    Miner,
+    Blacksmith,
+    Carpenter,
+    // ...
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
