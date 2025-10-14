@@ -6,28 +6,8 @@ use shared::{BiomeType, HexCoord};
 
 const HEX_SIZE: f32 = 32.0;
 
-#[derive(Resource)]
-pub struct HexRenderer {
-    pub layout: HexLayout,
-    pub hex_size: f32,
-}
-
-impl Default for HexRenderer {
-    fn default() -> Self {
-        Self {
-            layout: HexLayout {
-                orientation: HexOrientation::Flat,
-                // hex_size: Vec2::splat(32.0),
-                ..default()
-            },
-            hex_size: HEX_SIZE,
-        }
-    }
-}
-
 pub fn render_hex_grid(
     mut gizmos: Gizmos,
-    hex_renderer: Res<HexRenderer>,
     camera: Query<(&Transform, &Projection), With<Camera>>,
     world_cache: Res<WorldCache>,
 ) {
@@ -52,7 +32,7 @@ pub fn render_hex_grid(
                 continue;
             }
             let color = biome_color(tile.biome);
-            draw_hex(&mut gizmos, world_pos, hex_renderer.hex_size, color);
+            draw_hex(&mut gizmos, world_pos, HEX_SIZE, color);
         }
     }
 }

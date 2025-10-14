@@ -5,12 +5,15 @@
 use bevy::prelude::*;
 use shared::{ChunkId, ServerMessage};
 use crate::networking::NetworkClient;
-use super::world_cache::WorldCache;
+use super::{world_cache::WorldCache, connection::ConnectionStatus};
+use tracing::*;
 
 #[derive(Resource)]
 pub struct StreamingConfig {
     pub view_radius: i32,
     pub unload_distance: i32,
+    pub request_cooldown: f32,
+    last_request: f32,
 }
 
 impl Default for StreamingConfig {
@@ -18,6 +21,8 @@ impl Default for StreamingConfig {
         Self {
             view_radius: 3,
             unload_distance: 5,
+            request_cooldown: 0.5, // 500ms entre requêtes
+            last_request: -999.0,
         }
     }
 }
@@ -25,12 +30,24 @@ impl Default for StreamingConfig {
 pub fn request_chunks_around_camera(
     camera: Query<&Transform, With<Camera2d>>,
     mut cache: ResMut<WorldCache>,
-    config: Res<StreamingConfig>,
+    mut config: ResMut<StreamingConfig>,
     network: Option<ResMut<NetworkClient>>,
+    connection: Res<ConnectionStatus>,
+    time: Res<Time>,
 ) {
     let Some(mut net) = network else { return };
     let Ok(transform) = camera.single() else { return };
+
+    // Wait for login confirmation
+    if !connection.is_ready() {
+        return;
+    }
     
+    // Throttle requests
+    if time.elapsed_secs() - config.last_request < config.request_cooldown {
+        return;
+    }
+
     let center_chunk = world_pos_to_chunk(transform.translation.truncate());
     let mut to_request = Vec::new();
     
@@ -49,22 +66,44 @@ pub fn request_chunks_around_camera(
     }
     
     if !to_request.is_empty() {
+        tracing::info!("Requesting {} chunks", to_request.len());
+        let first = to_request[0];
         net.send_message(shared::ClientMessage::RequestChunks {
-            chunk_ids: to_request,
+            chunk_ids: vec![first],
         });
+        config.last_request = time.elapsed_secs();
+        tracing::info!("Sent request for chunks");
     }
 }
 
 pub fn process_chunk_messages(
     mut cache: ResMut<WorldCache>,
+    mut connection: ResMut<ConnectionStatus>,
     network: Option<ResMut<NetworkClient>>,
     time: Res<Time>,
 ) {
     let Some(mut net) = network else { return };
+
+    let messages = net.poll_messages();
+    if !messages.is_empty() {
+        tracing::info!("Received {} messages from server", messages.len());
+    }
     
-    for msg in net.poll_messages() {
-        if let ServerMessage::ChunkData { chunk_id, tiles } = msg {
-            cache.insert_chunk(chunk_id, tiles, time.elapsed_secs());
+    for msg in messages {
+        match msg {
+            ServerMessage::LoginSuccess { player_id } => {
+                tracing::info!("✓ Login successful, player ID: {}", player_id);
+                connection.logged_in = true;
+                connection.player_id = Some(player_id);
+            }
+            ServerMessage::ChunkData { chunk_id, tiles } => {
+                tracing::info!("✓ Received chunk ({}, {}) with {} tiles", chunk_id.x, chunk_id.y, tiles.len());
+                cache.insert_chunk(chunk_id, tiles, time.elapsed_secs());
+                tracing::info!("✓ Loaded chunk {:?}", chunk_id);
+            }
+            _ => {
+                tracing::warn!("Unhandled server message: {:?}", msg);
+            }
         }
     }
 }

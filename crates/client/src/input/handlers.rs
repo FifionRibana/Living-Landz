@@ -46,8 +46,8 @@ pub fn debug_info(
         1.0
     };
 
-    tracing::info!("Camera: {:?}", transform.translation);
     tracing::info!("=== DEBUG ===");
+    tracing::info!("Camera: {:?}", transform.translation);
     tracing::info!("Zoom: {}", scale);
     tracing::info!("Chunks: {}", cache.chunk_count());
 }

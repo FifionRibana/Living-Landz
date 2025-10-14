@@ -56,7 +56,7 @@ pub fn camera_movement(
 }
 
 pub fn camera_zoom(
-    mut scroll: EventReader<bevy::input::mouse::MouseWheel>,
+    mut scroll: MessageReader<bevy::input::mouse::MouseWheel>,
     settings: Res<CameraSettings>,
     mut camera: Query<&mut Projection, With<MainCamera>>,
 ) {

@@ -110,7 +110,9 @@ async fn handle_connection(
     while let Some(msg) = read.next().await {
         match msg {
             Ok(Message::Binary(data)) => {
+                tracing::info!("Received message from {}: {} bytes", addr, data.len());
                 if let Ok(client_msg) = bincode::deserialize::<ClientMessage>(&data) {
+                    tracing::info!("ClientMessage: {:?}", client_msg);
                     let response = handle_client_message(
                         client_msg, 
                         player_id, 
@@ -121,6 +123,8 @@ async fn handle_connection(
                     if let Ok(response_data) = bincode::serialize(&response) {
                         let _ = write.send(Message::Binary(response_data)).await;
                     }
+                } else {
+                    tracing::warn!("Failed to deserialize message from {}", addr);
                 }
             }
             Ok(Message::Close(_)) => break,
@@ -149,6 +153,7 @@ async fn handle_client_message(
         }
         ClientMessage::RequestChunks { chunk_ids } => {
             // Try loading from DB first
+            tracing::info!("Player {} requested chunks: {:?}", player_id, chunk_ids);
             if let Some(&chunk_id) = chunk_ids.first() {
                 let chunk_coord = ChunkCoord {
                     x: chunk_id.x,

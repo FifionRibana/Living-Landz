@@ -18,6 +18,7 @@ use rendering::RenderingPlugin;
 use state::StatePlugin;
 
 fn main() {
+    tracing_subscriber::fmt::init();
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -31,8 +32,8 @@ fn main() {
             CameraPlugin,
             NetworkingPlugin,
             StatePlugin,
-            RenderingPlugin,
-            InputPlugin,
+            // RenderingPlugin,
+            // InputPlugin,
         ))
         .run();
 }

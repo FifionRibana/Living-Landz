@@ -14,6 +14,7 @@ impl Plugin for NetworkingPlugin {
 }
 
 fn setup_network_client(mut commands: Commands) {
+    tracing::info!("Attempting connection...");
     match NetworkClient::connect("ws://127.0.0.1:9001") {
         Ok(mut client) => {
             tracing::info!("Connected to server");
