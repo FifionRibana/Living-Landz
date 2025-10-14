@@ -3,10 +3,10 @@
 // =============================================================================
 
 use futures::{SinkExt, StreamExt};
+use rand::prelude::*;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use rand::prelude::*;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 use tokio_tungstenite::{accept_async, tungstenite::Error, tungstenite::Message};
@@ -71,16 +71,16 @@ async fn main() {
 async fn initialize_database() -> ChunkDatabase {
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost/living_landz".to_string());
-    
+
     tracing::info!("Connecting to database at {}", database_url);
-    
+
     let pool = sqlx::PgPool::connect(&database_url)
         .await
         .expect("Failed to connect to database");
-    
+
     let db = ChunkDatabase::new(pool);
     db.init_schema().await.expect("Failed to init schema");
-    
+
     tracing::info!("✓ Database connected");
     db
 }
@@ -113,15 +113,13 @@ async fn handle_connection(
                 tracing::info!("Received message from {}: {} bytes", addr, data.len());
                 if let Ok(client_msg) = bincode::deserialize::<ClientMessage>(&data) {
                     tracing::info!("ClientMessage: {:?}", client_msg);
-                    let response = handle_client_message(
-                        client_msg, 
-                        player_id, 
-                        &world_gen,
-                        &db,
-                    ).await;
+                    let responses =
+                        handle_client_message(client_msg, player_id, &world_gen, &db).await;
 
-                    if let Ok(response_data) = bincode::serialize(&response) {
-                        let _ = write.send(Message::Binary(response_data)).await;
+                    for response in responses {
+                        if let Ok(response_data) = bincode::serialize(&response) {
+                            let _ = write.send(Message::Binary(response_data)).await;
+                        }
                     }
                 } else {
                     tracing::warn!("Failed to deserialize message from {}", addr);
@@ -145,45 +143,64 @@ async fn handle_client_message(
     player_id: u64,
     world_gen: &WorldGenerator,
     db: &ChunkDatabase,
-) -> ServerMessage {
+) -> Vec<ServerMessage> {
     match msg {
         ClientMessage::Login { username } => {
             tracing::info!("Player {} logged in as {}", player_id, username);
-            ServerMessage::LoginSuccess { player_id }
+            vec![ServerMessage::LoginSuccess { player_id }]
         }
         ClientMessage::RequestChunks { chunk_ids } => {
             // Try loading from DB first
             tracing::info!("Player {} requested chunks: {:?}", player_id, chunk_ids);
-            if let Some(&chunk_id) = chunk_ids.first() {
+
+            let mut responses = Vec::new();
+            for chunk_id in chunk_ids {
+                tracing::info!("Request chunk ({}, {})", chunk_id.x, chunk_id.y);
                 let chunk_coord = ChunkCoord {
                     x: chunk_id.x,
                     y: chunk_id.y,
                 };
-                
+
                 match db.load_chunk(chunk_coord).await {
                     Ok(Some(chunk)) => {
                         // Return from DB
-                        return ServerMessage::ChunkData {
+                        tracing::info!("Loaded chunk ({}, {}) from DB", chunk_id.x, chunk_id.y);
+                        responses.push(ServerMessage::ChunkData {
                             chunk_id,
-                            tiles: chunk.tiles.iter().map(|t| shared::TileData {
-                                coord: t.coord,
-                                biome: t.biome,
-                                altitude: t.altitude,
-                                quality: t.quality,
-                            }).collect(),
-                        };
+                            tiles: chunk
+                                .tiles
+                                .iter()
+                                .map(|t| shared::TileData {
+                                    coord: t.coord,
+                                    biome: t.biome,
+                                    altitude: t.altitude,
+                                    quality: t.quality,
+                                })
+                                .collect(),
+                        });
                     }
-                    _ => {
-                        // Fallback: generate on-the-fly
+                    Ok(None) => {
+                        tracing::warn!(
+                            "Chunk ({}, {}) not in DB, generating",
+                            chunk_id.x,
+                            chunk_id.y
+                        );
                         let tiles = world_gen.generate_chunk(chunk_id);
-                        return ServerMessage::ChunkData { chunk_id, tiles };
+                        responses.push(ServerMessage::ChunkData { chunk_id, tiles });
+                    }
+                    Err(e) => {
+                        tracing::error!("DB error for chunk ({}, {}): {}", chunk_id.x, chunk_id.y, e);
+                        let tiles = world_gen.generate_chunk(chunk_id);
+                        responses.push(ServerMessage::ChunkData { chunk_id, tiles });
                     }
                 }
             }
-            ServerMessage::Pong
+
+            tracing::info!("Sending {} chunk responses", responses.len());
+            responses
         }
-        ClientMessage::Ping => ServerMessage::Pong,
-        _ => ServerMessage::Pong,
+        ClientMessage::Ping => vec![ServerMessage::Pong],
+        _ => vec![ServerMessage::Pong],
     }
 }
 

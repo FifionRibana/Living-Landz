@@ -16,6 +16,7 @@ use input::InputPlugin;
 use networking::NetworkingPlugin;
 use rendering::RenderingPlugin;
 use state::StatePlugin;
+use ui::UiPlugin;
 
 fn main() {
     tracing_subscriber::fmt::init();
@@ -32,8 +33,9 @@ fn main() {
             CameraPlugin,
             NetworkingPlugin,
             StatePlugin,
-            // RenderingPlugin,
-            // InputPlugin,
+            UiPlugin,
+            RenderingPlugin,
+            InputPlugin,
         ))
         .run();
 }

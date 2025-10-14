@@ -48,9 +48,11 @@ pub fn request_chunks_around_camera(
         return;
     }
 
+    // tracing::info!("Pos: {:?}", transform.translation.truncate());
     let center_chunk = world_pos_to_chunk(transform.translation.truncate());
     let mut to_request = Vec::new();
-    
+    // tracing::info!("Chunk: ({}, {})", center_chunk.x, center_chunk.y);
+
     for dx in -config.view_radius..=config.view_radius {
         for dy in -config.view_radius..=config.view_radius {
             let chunk_id = ChunkId {
@@ -67,9 +69,8 @@ pub fn request_chunks_around_camera(
     
     if !to_request.is_empty() {
         tracing::info!("Requesting {} chunks", to_request.len());
-        let first = to_request[0];
         net.send_message(shared::ClientMessage::RequestChunks {
-            chunk_ids: vec![first],
+            chunk_ids: to_request,
         });
         config.last_request = time.elapsed_secs();
         tracing::info!("Sent request for chunks");
