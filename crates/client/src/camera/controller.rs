@@ -16,9 +16,10 @@ impl Default for CameraSettings {
     fn default() -> Self {
         Self {
             speed: 500.0,
-            zoom_speed: 0.1,
+            zoom_speed: 1.,
+            // zoom_speed: 0.1,
             min_zoom: 0.5,
-            max_zoom: 3.0,
+            max_zoom: 10.0,
         }
     }
 }

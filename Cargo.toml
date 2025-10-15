@@ -15,21 +15,7 @@ license = "MIT"
 
 [workspace.dependencies]
 # Bevy 0.17.2 (client)
-bevy = { version = "0.17.2", default-features = false, features = [
-    "bevy_asset",
-    "bevy_winit",
-    "bevy_render",
-    "bevy_color",
-    "bevy_core_pipeline",
-    "bevy_debug_stepping",
-    "bevy_sprite",
-    "bevy_sprite_render",
-    "bevy_text",
-    "bevy_ui",
-    "bevy_gizmos",     # Pour le debug drawing
-    "png",
-    "multi_threaded",  # Important pour performance
-] }
+bevy = { version = "0.17.2" }
 
 # ECS Backend (serveur) - Legion ou Hecs
 legion = "0.4"

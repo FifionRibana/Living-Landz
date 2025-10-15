@@ -3,7 +3,6 @@ use hexx::*;
 
 use crate::state::WorldCache;
 use shared::{BiomeType, HexCoord};
-use tracing::*;
 
 const HEX_SIZE: f32 = 32.0;
 
