@@ -15,10 +15,33 @@ license = "MIT"
 
 [workspace.dependencies]
 # Bevy 0.17.2 (client)
-bevy = { version = "0.17.2" }
+bevy = { version = "0.17.2", default_features=false, features = [
+    # Parts of Bevy:
+    "bevy_asset",                  # Asset management
+    "bevy_color",                  # Color management
+    "bevy_core_pipeline",          # Bevy's GPU rendering architecture
+    "bevy_gizmos",                 # Gizmos (drawing debug lines and shapes)
+    "bevy_image",                  # Image support
+    "bevy_input_focus",            # Input focusing system for UI
+    "bevy_render",                 # GPU support (based on `wgpu`)
+    # "bevy_scene",                  # ECS Scenes
+    "bevy_sprite",                 # 2D rendering (sprites, meshes, text)
+    "bevy_sprite_render",
+    "bevy_text",                   # Text rendering
+    "bevy_ui",                     # UI toolkit
+    "bevy_ui_picking_backend",     # UI node picking (selection by cursor)
+    "bevy_ui_render",
+    "bevy_winit",                  # Cross-platform window management support
+
+    "std",            # Use the Rust standard library (important!)
+    "multi_threaded", # Enable CPU multithreading
+    "default_font",     # Built-in default font for UI (Fira Mono)
+    "png",       # PNG image format for simple 2D images
+
+] }
 
 # ECS Backend (serveur) - Legion ou Hecs
-legion = "0.4"
+# legion = "0.4"
 # Alternative : hecs = "0.10"
 log = "0.4"
 # Async runtime (serveur)

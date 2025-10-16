@@ -11,7 +11,7 @@ path = "src/main.rs"
 shared = { path = "../shared" }
 hex_grid = { path = "../hex_grid" }
 
-legion = { workspace = true }
+# legion = { workspace = true }
 tokio = { workspace = true }
 tungstenite = { workspace = true }
 bincode = { workspace = true }
@@ -32,4 +32,6 @@ noise = "0.9"
 image = "0.25"
 rayon = "1.10"
 
-bevy = { workspace = true, default-features = false, features = ["multi_threaded"] }
+bevy = { workspace = true, default-features = false, features = [
+    "multi_threaded",
+] }
