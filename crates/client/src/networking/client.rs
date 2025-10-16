@@ -3,14 +3,13 @@
 // =============================================================================
 
 use bevy::prelude::*;
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{channel, Sender};
-use std::collections::VecDeque;
-use tungstenite::{connect, Message};
-use std::thread;
 use shared::{ClientMessage, ServerMessage};
-use std::time::Duration;
-use url::*;
+use std::collections::VecDeque;
+use std::sync::mpsc::{channel, Sender};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use tungstenite::Message;
+
 #[derive(Resource)]
 pub struct NetworkClient {
     outgoing: Sender<Vec<u8>>,
@@ -23,24 +22,25 @@ impl NetworkClient {
         tracing::info!("Connecting to {}", server_url);
 
         // Parse URL to extract host:port
-        let url = url::Url::parse(server_url)
-            .map_err(|e| format!("Invalid URL: {}", e))?;
+        let url = url::Url::parse(server_url).map_err(|e| format!("Invalid URL: {}", e))?;
         let host = url.host_str().ok_or("No host in URL")?;
         let port = url.port().unwrap_or(9001);
-        
+
         // Connect TCP directly
         let tcp_stream = std::net::TcpStream::connect(format!("{}:{}", host, port))
             .map_err(|e| format!("TCP connection failed: {}", e))?;
-        
+
         tracing::info!("TCP connected, upgrading to WebSocket...");
 
         let (mut socket, _) = tungstenite::client(server_url, tcp_stream)
             .map_err(|e| format!("Connection failed: {}", e))?;
 
         // Set non-blocking BEFORE WebSocket upgrade
-        socket.get_mut().set_nonblocking(true)
+        socket
+            .get_mut()
+            .set_nonblocking(true)
             .map_err(|e| format!("Failed to set non-blocking: {}", e))?;
-        
+
         let (tx, rx) = channel::<Vec<u8>>();
         let incoming = Arc::new(Mutex::new(VecDeque::new()));
         let connected = Arc::new(Mutex::new(true));
@@ -48,7 +48,7 @@ impl NetworkClient {
         // Spawn a thread to read messages
         let incoming_clone = incoming.clone();
         let connected_clone = connected.clone();
-        
+
         thread::spawn(move || {
             loop {
                 // Check if disconnected
@@ -64,8 +64,7 @@ impl NetworkClient {
                         tracing::error!("Write error: {}", e);
                         *connected_clone.lock().unwrap() = false;
                         return;
-                    }
-                    else {
+                    } else {
                         tracing::info!("✓ Message sent");
                     }
                     sent_any = true;
@@ -80,8 +79,7 @@ impl NetworkClient {
                     }
                     tracing::info!("✓ Messages flushed");
                 }
-                
-                
+
                 match socket.can_read() {
                     true => {
                         match socket.read() {
@@ -103,7 +101,9 @@ impl NetworkClient {
                                 break;
                             }
                             Ok(_) => {}
-                            Err(tungstenite::Error::Io(ref e)) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                            Err(tungstenite::Error::Io(ref e))
+                                if e.kind() == std::io::ErrorKind::WouldBlock =>
+                            {
                                 // No-blocking read, no data available
                                 thread::sleep(std::time::Duration::from_millis(10));
                             }
@@ -124,23 +124,27 @@ impl NetworkClient {
         });
 
         tracing::info!("✓ Connected to server");
-        
+
         Ok(Self {
             outgoing: tx,
             incoming,
-            connected
+            connected,
         })
     }
-    
+
     pub fn send_message(&mut self, message: ClientMessage) {
         if !*self.connected.lock().unwrap() {
             tracing::warn!("Cannot send message, not connected");
             return;
         }
-        
+
         match bincode::serialize(&message) {
             Ok(data) => {
-                tracing::info!("Queuing message ({} bytes) to server: {:?}", data.len(), message);
+                tracing::info!(
+                    "Queuing message ({} bytes) to server: {:?}",
+                    data.len(),
+                    message
+                );
                 if let Err(e) = self.outgoing.send(data) {
                     tracing::error!("Failed to queue message: {}", e);
                     *self.connected.lock().unwrap() = false;
@@ -151,12 +155,12 @@ impl NetworkClient {
             }
         }
     }
-    
+
     pub fn poll_messages(&mut self) -> Vec<ServerMessage> {
         let mut messages = self.incoming.lock().unwrap();
         messages.drain(..).collect()
     }
-    
+
     pub fn is_connected(&self) -> bool {
         *self.connected.lock().unwrap()
     }

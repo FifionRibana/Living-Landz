@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use shared::{ChunkId, ServerMessage};
 use crate::networking::NetworkClient;
 use super::{world_cache::WorldCache, connection::ConnectionStatus};
-use tracing::*;
+use tracing;
 
 #[derive(Resource)]
 pub struct StreamingConfig {

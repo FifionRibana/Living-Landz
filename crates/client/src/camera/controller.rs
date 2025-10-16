@@ -35,12 +35,19 @@ pub fn camera_movement(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     settings: Res<CameraSettings>,
-    mut camera: Query<&mut Transform, With<MainCamera>>,
+    mut camera: Query<(&mut Transform, &Projection), With<MainCamera>>,
 ) {
-    let Ok(mut transform) = camera.single_mut() else {
+    let Ok((mut transform, projection)) = camera.single_mut() else {
         return;
     };
-    let speed = settings.speed * time.delta_secs();
+
+    let scale = if let Projection::Orthographic(ortho) = projection {
+        ortho.scale
+    } else {
+        1.0
+    };
+
+    let speed = settings.speed * time.delta_secs() * scale;
 
     if keys.pressed(KeyCode::KeyW) || keys.pressed(KeyCode::ArrowUp) {
         transform.translation.y += speed;

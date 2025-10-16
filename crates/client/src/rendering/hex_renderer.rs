@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use hexx::*;
 
 use crate::state::WorldCache;
 use shared::{BiomeType, HexCoord};
