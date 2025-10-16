@@ -1,65 +1,73 @@
 use bevy::prelude::*;
 use crate::state::WorldCache;
-use super::{atlas::TerrainAtlas, components::*, coords::hex_to_world_iso};
+use super::{
+    atlas::BiomeMaterials,
+    components::*,
+    hex_config::HexConfig,
+};
 
-/// Setup initial de l'atlas
-pub fn setup_terrain_atlas(
-    mut commands: Commands,
-    images: ResMut<Assets<Image>>,
-    layouts: ResMut<Assets<TextureAtlasLayout>>,
-) {
-    let atlas = TerrainAtlas::create_placeholder(images, layouts);
-    commands.insert_resource(atlas);
-    tracing::info!("✓ Terrain atlas créé");
+/// Setup de la configuration hexagonale
+pub fn setup_hex_config(mut commands: Commands) {
+    let config = HexConfig::new(24.0); // Rayon = 24px
+    commands.insert_resource(config);
+    tracing::info!("✓ HexConfig configuré (rayon: 24.0, orientation: Flat)");
 }
 
-/// Spawn les sprites pour les tuiles nouvellement chargées
+/// Setup des matériaux de biomes (APRÈS HexConfig)
+pub fn setup_biome_materials(
+    mut commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<ColorMaterial>>,
+    hex_config: Res<HexConfig>,
+) {
+    let biome_materials = BiomeMaterials::create(
+        meshes,
+        materials,
+        hex_config,
+    );
+    commands.insert_resource(biome_materials);
+    tracing::info!("✓ Biome materials créés");
+}
+
+/// Spawn les hexagones avec positionnement hexx
 pub fn spawn_hex_sprites(
     mut commands: Commands,
     world_cache: Res<WorldCache>,
-    atlas: Res<TerrainAtlas>,
+    biome_materials: Res<BiomeMaterials>,
+    hex_config: Res<HexConfig>,
     existing: Query<&HexTile>,
 ) {
-    // Créer un HashSet des coords déjà spawned
     let existing_coords: std::collections::HashSet<_> = 
         existing.iter().map(|h| h.coord).collect();
     
     for chunk in world_cache.chunks() {
         for tile_data in &chunk.tiles {
-            // Skip si déjà spawned
             if existing_coords.contains(&tile_data.coord) {
                 continue;
             }
             
-            let world_pos = hex_to_world_iso(tile_data.coord);
-            let texture_index = atlas.get_index(tile_data.biome);
+            // Conversion hexx: HexCoord → Hex → world pos
+            let hex = tile_data.coord.to_hex();
+            let world_pos = hex_config.layout.hex_to_world_pos(hex);
+            
             let visuals = HexVisuals::new(tile_data.biome, tile_data.coord);
-            let tint = visuals.tint;
-
+            let material = biome_materials.get_material(tile_data.biome);
+            
             commands.spawn((
                 HexTile {
                     coord: tile_data.coord,
                     chunk_id: chunk.id,
                 },
-                visuals,
+                visuals.clone(),
                 LodLevel::Medium,
-                Sprite {
-                    image: atlas.texture.clone(),
-                    texture_atlas: Some(TextureAtlas {
-                        layout: atlas.layout.clone(),
-                        index: texture_index,
-                    }),
-                    color: tint,
-                    custom_size: Some(Vec2::splat(48.0)),
-                    ..default()
-                },
+                Mesh2d(biome_materials.hex_mesh.clone()),
+                MeshMaterial2d(material),
                 Transform::from_translation(world_pos.extend(0.0)),
             ));
         }
     }
 }
 
-/// Despawn les hexagones des chunks déchargés
 pub fn despawn_unloaded_hexes(
     mut commands: Commands,
     world_cache: Res<WorldCache>,
@@ -75,16 +83,12 @@ pub fn despawn_unloaded_hexes(
     }
 }
 
-/// Update visuel si le biome a changé (rare, mais utile pour futur)
 pub fn update_hex_visuals(
-    mut query: Query<(&HexTile, &mut HexVisuals, &mut Sprite), Changed<HexVisuals>>,
-    atlas: Res<TerrainAtlas>,
+    mut query: Query<(&HexVisuals, &mut MeshMaterial2d<ColorMaterial>), Changed<HexVisuals>>,
+    biome_materials: Res<BiomeMaterials>,
 ) {
-    for (_tile, visuals, mut sprite) in &mut query {
-        let new_index = atlas.get_index(visuals.biome);
-        if let Some(ref mut atlas_data) = sprite.texture_atlas {
-            atlas_data.index = new_index;
-        }
-        sprite.color = visuals.tint;
+    for (visuals, mut material) in &mut query {
+        let new_material = biome_materials.get_material(visuals.biome);
+        material.0 = new_material;
     }
 }

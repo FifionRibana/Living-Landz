@@ -5,8 +5,8 @@
 use bevy::prelude::*;
 use shared::{ChunkId, ServerMessage};
 use crate::networking::NetworkClient;
+use crate::rendering::{HexConfig, coords::world_pos_to_chunk};
 use super::{world_cache::WorldCache, connection::ConnectionStatus};
-use tracing;
 
 #[derive(Resource)]
 pub struct StreamingConfig {
@@ -21,7 +21,7 @@ impl Default for StreamingConfig {
         Self {
             view_radius: 3,
             unload_distance: 5,
-            request_cooldown: 0.5, // 500ms entre requêtes
+            request_cooldown: 0.5,
             last_request: -999.0,
         }
     }
@@ -33,25 +33,25 @@ pub fn request_chunks_around_camera(
     mut config: ResMut<StreamingConfig>,
     network: Option<ResMut<NetworkClient>>,
     connection: Res<ConnectionStatus>,
+    hex_config: Res<HexConfig>,
     time: Res<Time>,
 ) {
     let Some(mut net) = network else { return };
     let Ok(transform) = camera.single() else { return };
 
-    // Wait for login confirmation
     if !connection.is_ready() {
         return;
     }
     
-    // Throttle requests
     if time.elapsed_secs() - config.last_request < config.request_cooldown {
         return;
     }
 
-    // tracing::info!("Pos: {:?}", transform.translation.truncate());
-    let center_chunk = world_pos_to_chunk(transform.translation.truncate());
+    let center_chunk = world_pos_to_chunk(
+        transform.translation.truncate(),
+        &hex_config.layout
+    );
     let mut to_request = Vec::new();
-    // tracing::info!("Chunk: ({}, {})", center_chunk.x, center_chunk.y);
 
     for dx in -config.view_radius..=config.view_radius {
         for dy in -config.view_radius..=config.view_radius {
@@ -73,7 +73,6 @@ pub fn request_chunks_around_camera(
             chunk_ids: to_request,
         });
         config.last_request = time.elapsed_secs();
-        tracing::info!("Sent request for chunks");
     }
 }
 
@@ -98,9 +97,9 @@ pub fn process_chunk_messages(
                 connection.player_id = Some(player_id);
             }
             ServerMessage::ChunkData { chunk_id, tiles } => {
-                tracing::info!("✓ Received chunk ({}, {}) with {} tiles", chunk_id.x, chunk_id.y, tiles.len());
+                tracing::info!("✓ Received chunk ({}, {}) with {} tiles",
+                    chunk_id.x, chunk_id.y, tiles.len());
                 cache.insert_chunk(chunk_id, tiles, time.elapsed_secs());
-                tracing::info!("✓ Loaded chunk {:?}", chunk_id);
             }
             _ => {
                 tracing::warn!("Unhandled server message: {:?}", msg);
@@ -113,22 +112,12 @@ pub fn unload_distant_chunks(
     camera: Query<&Transform, With<Camera2d>>,
     mut cache: ResMut<WorldCache>,
     config: Res<StreamingConfig>,
+    hex_config: Res<HexConfig>,
 ) {
     let Ok(transform) = camera.single() else { return };
-    let center = world_pos_to_chunk(transform.translation.truncate());
+    let center = world_pos_to_chunk(
+        transform.translation.truncate(),
+        &hex_config.layout
+    );
     cache.unload_distant(center, config.unload_distance);
-}
-
-const CHUNK_SIZE: i32 = 60;
-const HEX_SIZE: f32 = 20.0;
-
-fn world_pos_to_chunk(pos: Vec2) -> ChunkId {
-    let sqrt3 = 1.732050808;
-    let q = ((pos.x * sqrt3/3.0 - pos.y / 3.0) / HEX_SIZE) as i32;
-    let r = ((pos.y * 2.0/3.0) / HEX_SIZE) as i32;
-    
-    ChunkId {
-        x: q.div_euclid(CHUNK_SIZE),
-        y: r.div_euclid(CHUNK_SIZE),
-    }
 }
