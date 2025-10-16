@@ -3,10 +3,12 @@
 // =============================================================================
 // File: crates/hex_grid/src/lib.rs
 
+use bevy::prelude::*;
 use shared::{BiomeType, ChunkId, HexCoord, TileData};
 
 pub const CHUNK_SIZE: u32 = 48;
 
+#[derive(Resource, Clone)]
 pub struct WorldGenerator {
     seed: u64,
 }

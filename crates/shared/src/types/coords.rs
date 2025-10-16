@@ -1,6 +1,8 @@
 use hexx::Hex;
 use serde::{Deserialize, Serialize};
 
+use super::biomes::BiomeType;
+
 /// Coordonnées hexagonales axiales (q, r)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct HexCoord {
@@ -49,4 +51,12 @@ impl ChunkId {
             y: coord.r.div_euclid(chunk_size),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TileData {
+    pub coord: HexCoord,
+    pub biome: BiomeType,
+    pub altitude: i16,
+    pub quality: u8,
 }

@@ -7,7 +7,7 @@ pub enum ClientMessage {
     /// Connexion initiale
     Login {
         username: String,
-        password_hash: String,
+        // password_hash: String,
     },
     
     /// Demande chunks autour d'une position
@@ -16,7 +16,7 @@ pub enum ClientMessage {
     },
     
     /// Action de construction
-    Build {
+    BuildAction {
         coord: HexCoord,
         building_type: BuildingType,
     },
@@ -37,25 +37,25 @@ pub enum ServerMessage {
     /// Confirmation de connexion
     LoginSuccess {
         player_id: u64,
-        character_id: u64,
     },
     
     /// Erreur de connexion
     LoginError {
         reason: String,
     },
-    
+    WorldTick {
+        tick: u64,
+    },
     /// État global du monde (tick)
     WorldState {
         tick: u64,
         timestamp: u64,
     },
-    
     /// Données d'un chunk
     ChunkData {
         chunk_id: ChunkId,
         tiles: Vec<TileData>,
-        entities: Vec<EntitySnapshot>,
+        // entities: Vec<EntitySnapshot>,
     },
     
     /// Notification de tick
@@ -73,18 +73,10 @@ pub enum ServerMessage {
     Pong,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TileData {
-    pub coord: HexCoord,
-    pub biome: BiomeType,
-    pub altitude: i16,
-    pub quality: u8,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EntitySnapshot {
-    pub id: u64,
-    pub entity_type: EntityType,
-    pub position: HexCoord,
-    // ... autres données selon type
-}
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// pub struct EntitySnapshot {
+//     pub id: u64,
+//     pub entity_type: EntityType,
+//     pub position: HexCoord,
+//     // ... autres données selon type
+// }

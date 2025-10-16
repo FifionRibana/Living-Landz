@@ -10,3 +10,4 @@ hexx = { workspace = true }
 serde = { workspace = true }
 glam = { workspace = true }
 rand = { workspace = true }
+bevy = { workspace = true }

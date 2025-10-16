@@ -1,5 +1,5 @@
 use std::time::{Duration, Instant};
-use legion::*;
+use bevy::prelude::World;
 
 pub struct TickScheduler {
     pub tick_interval: Duration,
@@ -27,10 +27,10 @@ impl TickScheduler {
         tracing::info!("Executing tick {}", self.current_tick);
         
         // Exécuter tous les systèmes
-        run_production_system(world);
-        run_consumption_system(world);
-        run_construction_system(world);
-        run_market_system(world);
+        // run_production_system(world);
+        // run_consumption_system(world);
+        // run_construction_system(world);
+        // run_market_system(world);
         // ... autres systèmes
     }
     
