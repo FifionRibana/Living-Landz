@@ -96,7 +96,7 @@ pub fn process_chunk_messages(
                 connection.logged_in = true;
                 connection.player_id = Some(player_id);
             }
-            ServerMessage::ChunkData { chunk_id, tiles } => {
+            ServerMessage::ChunkData { chunk_id, tiles, buildings } => {
                 tracing::info!("✓ Received chunk ({}, {}) with {} tiles",
                     chunk_id.x, chunk_id.y, tiles.len());
                 cache.insert_chunk(chunk_id, tiles, time.elapsed_secs());

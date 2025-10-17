@@ -19,16 +19,19 @@ async fn main() {
     // Check if world generation needed
     let args: Vec<String> = std::env::args().collect();
 
-    let db = database::initialize_database().await;
+    let (chunk_db, building_db) = database::initialize_database().await;
 
     if args.contains(&"--regenerate-world".to_string()) {
         tracing::info!("=== Regenerating World (clearing DB first) ===");
 
         // Suppression
-        db.clear_all_chunks().await.expect("Failed to clear DB");
+        chunk_db
+            .clear_all_chunks()
+            .await
+            .expect("Failed to clear DB");
 
         // Regénération
-        world::systems::generate_world_complete(&db).await;
+        world::systems::generate_world_complete(&chunk_db).await;
 
         tracing::info!("=== Regeneration Complete ===");
         return;
@@ -36,7 +39,7 @@ async fn main() {
 
     if args.contains(&"--generate-world".to_string()) {
         tracing::info!("=== Starting World Generation ===");
-        world::systems::generate_world_complete(&db).await;
+        world::systems::generate_world_complete(&chunk_db).await;
         tracing::info!("=== Generation Complete - Exiting ===");
         return;
     }
@@ -44,14 +47,20 @@ async fn main() {
     let sessions = networking::Sessions::default();
     let world_gen = WorldGenerator::new(12345);
 
-    networking::initialize_server(sessions.clone(), world_gen.clone(), Arc::new(db.clone()));
+    networking::initialize_server(
+        sessions.clone(),
+        world_gen.clone(),
+        Arc::new(chunk_db.clone()),
+        Arc::new(building_db.clone()),
+    );
 
     tokio::task::spawn_blocking(|| {
         App::new()
             .add_plugins(MinimalPlugins)
             .insert_resource(world_gen)
             .insert_resource(sessions)
-            .insert_resource(db)
+            .insert_resource(chunk_db)
+            .insert_resource(building_db)
             .run();
     })
     .await

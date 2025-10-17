@@ -1,7 +1,8 @@
 use sqlx::postgres::PgPool;
 use std::sync::Arc;
 
-use crate::world::ChunkDatabase;
+use super::chunks::ChunkDatabase;
+use super::buildings::BuildingDatabase;
 
 pub struct DatabaseCredentials {
     pub username: String,
@@ -29,7 +30,7 @@ impl DatabaseClient {
         }
     }
 
-    pub async fn connect(&self, credentials: &DatabaseCredentials) -> ChunkDatabase {
+    pub async fn connect(&self, credentials: &DatabaseCredentials) -> (ChunkDatabase, BuildingDatabase) {
         let database_url = format!(
             "{}://{}:{}@{}/{}",
             self.protocol, credentials.username, credentials.password, self.address, self.name
@@ -40,15 +41,19 @@ impl DatabaseClient {
             .await
             .expect("Failed to connect to database");
 
-        let db = ChunkDatabase::new(pool);
-        db.init_schema().await.expect("Failed to init schema");
+        let chunk_db = ChunkDatabase::new(pool.clone());
+        chunk_db.init_schema().await.expect("Failed to init chunk database schema");
+
+        
+        let building_db = BuildingDatabase::new(pool.clone());
+        building_db.init_schema().await.expect("Failed to init building database schema");
 
         tracing::info!("✓ Database connected");
-        db
+        (chunk_db, building_db)
     }
 }
 
-pub async fn initialize_database() -> ChunkDatabase {
+pub async fn initialize_database() -> (ChunkDatabase, BuildingDatabase) {
     tracing::info!("Setting up database client...");
 
     let protocol = std::env::var("DB_PROTOCOL").unwrap_or_else(|_| "postgres".to_string());
@@ -74,7 +79,7 @@ pub async fn initialize_database() -> ChunkDatabase {
         db_name
     );
 
-    let db: ChunkDatabase = tokio::task::block_in_place(|| {
+    let (chunk_db, building_db): (ChunkDatabase, BuildingDatabase) = tokio::task::block_in_place(|| {
         tokio::runtime::Handle::current().block_on(async {
             let db_credentials = DatabaseCredentials {
                 username: user,
@@ -96,5 +101,5 @@ pub async fn initialize_database() -> ChunkDatabase {
     });
 
     tracing::info!("✓ Database client ready");
-    db
+    (chunk_db, building_db)
 }

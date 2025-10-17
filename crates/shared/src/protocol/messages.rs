@@ -27,6 +27,12 @@ pub enum ClientMessage {
         destination: HexCoord,
     },
     
+    /// Action sur bâtiment
+    BuildingAction {
+        building_id: u64,
+        action: BuildingActionType,
+    },
+
     /// Ping (keepalive)
     Ping,
 }
@@ -43,19 +49,35 @@ pub enum ServerMessage {
     LoginError {
         reason: String,
     },
+
     WorldTick {
         tick: u64,
     },
+
     /// État global du monde (tick)
     WorldState {
         tick: u64,
         timestamp: u64,
     },
+
     /// Données d'un chunk
     ChunkData {
         chunk_id: ChunkId,
         tiles: Vec<TileData>,
+        buildings: Vec<BuildingData>,
         // entities: Vec<EntitySnapshot>,
+    },
+    
+    /// Update bâtiment individuel
+    BuildingUpdate {
+        building: Building,
+        tree_data: Option<TreeData>,
+    },
+    
+    /// Destruction bâtiment
+    BuildingDestroyed {
+        building_id: u64,
+        coord: HexCoord,
     },
     
     /// Notification de tick
@@ -80,3 +102,9 @@ pub enum ServerMessage {
 //     pub position: HexCoord,
 //     // ... autres données selon type
 // }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildingData {
+    pub building: Building,
+    pub tree_data: Option<TreeData>,
+}

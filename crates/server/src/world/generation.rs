@@ -2,9 +2,14 @@
 // WORLD GENERATION
 // =============================================================================
 
-use super::{components::*, resources::*};
 use noise::{NoiseFn, Perlin};
+use std::collections::HashMap;
+
 use shared::types::*;
+use shared::protocol::BuildingData;
+
+use super::building_generator::BuildingGenerator;
+use super::{components::*, resources::*};
 
 // ============================================================================
 // CHUNK GENERATOR
@@ -18,8 +23,9 @@ impl ChunkGenerator {
         maps: &WorldMaps,
         config: &WorldConfig,
         noise_gen: &NoiseGenerator,
-    ) -> Chunk {
+    ) -> (Chunk, Vec<BuildingData>) {
         let mut tiles = Vec::with_capacity((CHUNK_SIZE * CHUNK_SIZE) as usize);
+        let mut buildings = Vec::new();
 
         for local_q in 0..CHUNK_SIZE as i32 {
             for local_r in 0..CHUNK_SIZE as i32 {
@@ -32,17 +38,49 @@ impl ChunkGenerator {
 
                 let tile = Self::generate_tile(hex, maps, config, noise_gen);
                 tiles.push(tile);
+                
+                // Génération bâtiments (arbres)
+                if BuildingGenerator::can_spawn_trees(tile.biome) {
+                    if let Some(building_data) = BuildingGenerator::generate_tree(
+                        hex,
+                        tile.biome,
+                        tile.altitude,
+                        noise_gen,
+                    ) {
+                        buildings.push(building_data);
+                    }
+                }
             }
         }
-
-        Chunk {
+        
+        // Calculer densité des arbres basée sur voisins
+        let buildings_clone = buildings.clone();
+        let tree_map: HashMap<HexCoord, &BuildingData> = buildings_clone
+            .iter()
+            .map(|b| (b.building.coord, b))
+            .collect();
+        
+        for building_data in &mut buildings.clone() {
+            if let Some(ref mut tree_data) = building_data.tree_data {
+                let density = BuildingGenerator::calculate_forest_density(
+                    building_data.building.coord,
+                    &tree_map,
+                );
+                tree_data.density = density;
+                tree_data.yield_multiplier = density * tree_data.age.health_multiplier();
+            }
+        }
+        
+        let chunk = Chunk {
             coord: chunk_coord,
             tiles,
             generated_at: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
-        }
+        };
+        
+        (chunk, buildings)
     }
 
     fn generate_tile(
