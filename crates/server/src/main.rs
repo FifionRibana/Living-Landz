@@ -6,7 +6,6 @@ use bevy::prelude::*;
 use hex_grid::WorldGenerator;
 use std::sync::Arc;
 
-
 mod database;
 mod networking;
 mod tick;
@@ -19,17 +18,32 @@ async fn main() {
 
     // Check if world generation needed
     let args: Vec<String> = std::env::args().collect();
+
+    let db = database::initialize_database().await;
+
+    if args.contains(&"--regenerate-world".to_string()) {
+        tracing::info!("=== Regenerating World (clearing DB first) ===");
+
+        // Suppression
+        db.clear_all_chunks().await.expect("Failed to clear DB");
+
+        // Regénération
+        world::systems::generate_world_complete(&db).await;
+
+        tracing::info!("=== Regeneration Complete ===");
+        return;
+    }
+
     if args.contains(&"--generate-world".to_string()) {
         tracing::info!("=== Starting World Generation ===");
-        world::systems::generate_world_complete().await;
+        world::systems::generate_world_complete(&db).await;
         tracing::info!("=== Generation Complete - Exiting ===");
         return;
     }
-    
-    let db = database::initialize_database().await;
+
     let sessions = networking::Sessions::default();
     let world_gen = WorldGenerator::new(12345);
-    
+
     networking::initialize_server(sessions.clone(), world_gen.clone(), Arc::new(db.clone()));
 
     tokio::task::spawn_blocking(|| {
@@ -39,7 +53,8 @@ async fn main() {
             .insert_resource(sessions)
             .insert_resource(db)
             .run();
-    }).await
+    })
+    .await
     .expect("Failed to start Bevy App");
 
     // Tick system

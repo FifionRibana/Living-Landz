@@ -6,6 +6,7 @@ pub enum BiomeType {
     DeepOcean,
     Coast,
     Beach,
+    Lake,
     Grassland,
     Forest,
     DenseForest,

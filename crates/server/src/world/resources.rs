@@ -191,6 +191,26 @@ impl ChunkDatabase {
         }))
     }
 
+    pub async fn clear_all_chunks(&self) -> Result<(), sqlx::Error> {
+        tracing::warn!("🗑️  Clearing all chunks from database...");
+        
+        sqlx::query("DELETE FROM chunks")
+            .execute(&self.pool)
+            .await?;
+        
+        tracing::info!("✓ Database cleared");
+        Ok(())
+    }
+    
+    /// Compte le nombre de chunks en DB
+    pub async fn count_chunks(&self) -> Result<i64, sqlx::Error> {
+        let row = sqlx::query("SELECT COUNT(*) as count FROM chunks")
+            .fetch_one(&self.pool)
+            .await?;
+        
+        Ok(row.get("count"))
+    }
+
     pub async fn chunk_exists(&self, coord: ChunkCoord) -> Result<bool, sqlx::Error> {
         let result = sqlx::query("SELECT 1 FROM chunks WHERE chunk_x = $1 AND chunk_y = $2")
             .bind(coord.x)

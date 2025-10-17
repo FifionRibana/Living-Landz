@@ -5,7 +5,9 @@
 use rayon::prelude::*;
 use super::{components::*, resources::*, generation::*};
 
-pub async fn generate_world_complete() {
+pub async fn generate_world_complete(
+    db: &ChunkDatabase,
+) {
     tracing::info!("Starting world generation...");
     let start = std::time::Instant::now();
     
@@ -18,17 +20,6 @@ pub async fn generate_world_complete() {
     ).expect("Failed to load world maps");
     
     let config = maps.config.clone();
-    
-    // Connect DB
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost/living_landz".to_string());
-    
-    let pool = sqlx::PgPool::connect(&database_url)
-        .await
-        .expect("Failed to connect to database");
-    
-    let db = ChunkDatabase::new(pool);
-    db.init_schema().await.expect("Failed to init schema");
     
     // Generate chunks
     let noise_gen = NoiseGenerator::new(config.seed);

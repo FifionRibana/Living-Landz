@@ -25,6 +25,7 @@ impl BiomeMaterials {
             (BiomeType::Ocean, Color::srgb(0.0, 0.4, 0.8)),
             (BiomeType::Coast, Color::srgb(0.5, 0.7, 0.9)),
             (BiomeType::Beach, Color::srgb(0.9, 0.85, 0.7)),
+            (BiomeType::Lake, Color::srgb(0.2, 0.5, 0.9)),      // ← NOUVEAU
             (BiomeType::Grassland, Color::srgb(0.2, 0.8, 0.2)),
             (BiomeType::Forest, Color::srgb(0.0, 0.5, 0.0)),
             (BiomeType::DenseForest, Color::srgb(0.0, 0.3, 0.0)),
