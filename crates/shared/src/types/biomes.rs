@@ -13,6 +13,8 @@ pub enum BiomeType {
     Mountain,
     HighMountain,
     Desert,
+    ColdDesert,
+    Savanna,
     Tundra,
     Taiga,
     Swamp,

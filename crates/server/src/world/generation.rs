@@ -92,7 +92,7 @@ impl ChunkGenerator {
         let (pixel_x, pixel_y) = Self::hex_to_pixel(hex, config);
 
         // ✅ VÉRIFICATION BINAIRE ABSOLUE
-        if !maps.is_land(pixel_x, pixel_y) {
+        if maps.is_ocean(pixel_x, pixel_y) {
             return HexTile {
                 coord: hex,
                 biome: BiomeType::DeepOcean,
@@ -110,7 +110,12 @@ impl ChunkGenerator {
         let smoothed_height = height_value + local_noise * 0.15;
 
         let altitude = Self::height_to_altitude_land(smoothed_height);
-        let biome = Self::refine_biome_land(base_biome, altitude, smoothed_height, noise, hex);
+        // TODO: adapt the method
+        let mut biome = base_biome;
+        if maps.is_lake(pixel_x, pixel_y) {
+            biome = BiomeType::Lake;
+        }
+        // let biome = Self::refine_biome_land(base_biome, altitude, smoothed_height, noise, hex);
         let quality = Self::calculate_quality(hex, biome, noise);
 
         HexTile {
