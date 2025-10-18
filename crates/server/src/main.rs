@@ -21,6 +21,28 @@ async fn main() {
 
     let (chunk_db, building_db) = database::initialize_database().await;
 
+    let mut map_name = "test_island";
+    if args.contains(&"--regenerate-world".to_string())
+        || args.contains(&"--generate-world".to_string())
+    {
+        let result = args
+            .iter()
+            .find(|arg| arg.starts_with("--map="))
+            .map(|arg| {
+                map_name = arg.trim_start_matches("--map=");
+                tracing::info!("Using map: {}", map_name);
+                // Here you would set the map to be used in generation
+                map_name
+            });
+        if result.is_none() {
+            tracing::warn!(
+                "--map flag provided but no map name found, using default: {}",
+                map_name
+            );
+        }
+        map_name = result.unwrap_or(map_name);
+    }
+
     if args.contains(&"--regenerate-world".to_string()) {
         tracing::info!("=== Regenerating World (clearing DB first) ===");
 
@@ -31,7 +53,7 @@ async fn main() {
             .expect("Failed to clear DB");
 
         // Regénération
-        world::systems::generate_world_complete(&chunk_db).await;
+        world::systems::generate_world_complete(&chunk_db, map_name).await;
 
         tracing::info!("=== Regeneration Complete ===");
         return;
@@ -39,7 +61,7 @@ async fn main() {
 
     if args.contains(&"--generate-world".to_string()) {
         tracing::info!("=== Starting World Generation ===");
-        world::systems::generate_world_complete(&chunk_db).await;
+        world::systems::generate_world_complete(&chunk_db, map_name).await;
         tracing::info!("=== Generation Complete - Exiting ===");
         return;
     }

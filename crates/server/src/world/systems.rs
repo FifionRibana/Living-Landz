@@ -8,15 +8,16 @@ use rayon::prelude::*;
 use shared::protocol::messages::BuildingData;
 
 
-pub async fn generate_world_complete(db: &ChunkDatabase) {
+pub async fn generate_world_complete(db: &ChunkDatabase, map_name: &str) {
     tracing::info!("Starting world generation...");
     let start = std::time::Instant::now();
+    tracing::info!("Using map: {}", map_name);
 
     // Load maps
     let maps = WorldMaps::load(
-        "assets/maps/test_island_heightmap.png",
-        "assets/maps/test_island_biomes.png",
-        "assets/maps/test_island_binary.png",
+        ("assets/maps/".to_string() + map_name + "_heightmap.png").as_str(),
+        ("assets/maps/".to_string() + map_name + "_biomemap.png").as_str(),
+        ("assets/maps/".to_string() + map_name + "_binarymap.png").as_str(),
         12345,
     )
     .expect("Failed to load world maps");
