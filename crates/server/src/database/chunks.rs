@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use shared::types::*;
-
 use sqlx::PgPool;
 use sqlx::Row;
 

@@ -20,7 +20,7 @@ impl TickScheduler {
         Instant::now() - self.last_tick >= self.tick_interval
     }
     
-    pub fn execute_tick(&mut self, world: &mut World) {
+    pub fn execute_tick(&mut self, _world: &mut World) {
         self.current_tick += 1;
         self.last_tick = Instant::now();
         

@@ -4,7 +4,6 @@
 
 use serde::{Deserialize, Serialize};
 use shared::types::*;
-use shared::types::resources::*;
 
 // ============================================================================
 // TERRAIN

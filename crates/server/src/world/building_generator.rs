@@ -1,4 +1,3 @@
-use noise::NoiseFn;
 use shared::types::*;
 use shared::protocol::BuildingData;
 use super::generation::NoiseGenerator;

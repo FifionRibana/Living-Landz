@@ -1,8 +1,5 @@
-use sqlx::postgres::PgPool;
-use std::sync::Arc;
-
-use super::chunks::ChunkDatabase;
 use super::buildings::BuildingDatabase;
+use super::chunks::ChunkDatabase;
 
 pub struct DatabaseCredentials {
     pub username: String,
@@ -17,12 +14,7 @@ pub struct DatabaseClient {
 }
 
 impl DatabaseClient {
-    pub async fn new(
-        protocol: &str,
-        address: &str,
-        name: &str,
-        credentials: &DatabaseCredentials,
-    ) -> Self {
+    pub async fn new(protocol: &str, address: &str, name: &str) -> Self {
         Self {
             protocol: protocol.to_string(),
             address: address.to_string(),
@@ -30,7 +22,10 @@ impl DatabaseClient {
         }
     }
 
-    pub async fn connect(&self, credentials: &DatabaseCredentials) -> (ChunkDatabase, BuildingDatabase) {
+    pub async fn connect(
+        &self,
+        credentials: &DatabaseCredentials,
+    ) -> (ChunkDatabase, BuildingDatabase) {
         let database_url = format!(
             "{}://{}:{}@{}/{}",
             self.protocol, credentials.username, credentials.password, self.address, self.name
@@ -42,11 +37,16 @@ impl DatabaseClient {
             .expect("Failed to connect to database");
 
         let chunk_db = ChunkDatabase::new(pool.clone());
-        chunk_db.init_schema().await.expect("Failed to init chunk database schema");
+        chunk_db
+            .init_schema()
+            .await
+            .expect("Failed to init chunk database schema");
 
-        
         let building_db = BuildingDatabase::new(pool.clone());
-        building_db.init_schema().await.expect("Failed to init building database schema");
+        building_db
+            .init_schema()
+            .await
+            .expect("Failed to init building database schema");
 
         tracing::info!("✓ Database connected");
         (chunk_db, building_db)
@@ -66,10 +66,10 @@ pub async fn initialize_database() -> (ChunkDatabase, BuildingDatabase) {
     let user = std::env::var("DB_USER").unwrap_or_else(|_| "postgres".to_string());
     let password = std::env::var("DB_PASSWORD").unwrap_or_else(|_| "postgres".to_string());
 
-    let db_url = format!(
-        "{}://{}:{}@{}:{}/{}",
-        protocol, user, password, host, port, db_name
-    );
+    // let db_url = format!(
+    //     "{}://{}:{}@{}:{}/{}",
+    //     protocol, user, password, host, port, db_name
+    // );
 
     tracing::info!(
         "Connecting to database at {}://{}:{}/{}",
@@ -79,26 +79,26 @@ pub async fn initialize_database() -> (ChunkDatabase, BuildingDatabase) {
         db_name
     );
 
-    let (chunk_db, building_db): (ChunkDatabase, BuildingDatabase) = tokio::task::block_in_place(|| {
-        tokio::runtime::Handle::current().block_on(async {
-            let db_credentials = DatabaseCredentials {
-                username: user,
-                password,
-            };
+    let (chunk_db, building_db): (ChunkDatabase, BuildingDatabase) =
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                let db_credentials = DatabaseCredentials {
+                    username: user,
+                    password,
+                };
 
-            let db_client = DatabaseClient::new(
-                &protocol,
-                format!("{}:{}", host, port).as_str(),
-                &db_name,
-                &db_credentials,
-            )
-            .await;
+                let db_client = DatabaseClient::new(
+                    &protocol,
+                    format!("{}:{}", host, port).as_str(),
+                    &db_name,
+                )
+                .await;
 
-            let db = db_client.connect(&db_credentials).await;
+                let db = db_client.connect(&db_credentials).await;
 
-            db
-        })
-    });
+                db
+            })
+        });
 
     tracing::info!("✓ Database client ready");
     (chunk_db, building_db)

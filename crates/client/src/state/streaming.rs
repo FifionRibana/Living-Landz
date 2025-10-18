@@ -97,9 +97,9 @@ pub fn process_chunk_messages(
                 connection.player_id = Some(player_id);
             }
             ServerMessage::ChunkData { chunk_id, tiles, buildings } => {
-                tracing::info!("✓ Received chunk ({}, {}) with {} tiles",
-                    chunk_id.x, chunk_id.y, tiles.len());
-                cache.insert_chunk(chunk_id, tiles, time.elapsed_secs());
+                tracing::info!("✓ Received chunk ({}, {}) with {} tiles and {} buildings",
+                    chunk_id.x, chunk_id.y, tiles.len(), buildings.len());
+                cache.insert_chunk(chunk_id, tiles, buildings, time.elapsed_secs());
             }
             _ => {
                 tracing::warn!("Unhandled server message: {:?}", msg);

@@ -9,7 +9,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 
 use hex_grid::WorldGenerator;
-use shared::{ChunkId, ClientMessage, ServerMessage, TileData};
+use shared::{ClientMessage, ServerMessage, TileData};
 
 use super::Sessions;
 use crate::{database::BuildingDatabase, database::ChunkDatabase, world::ChunkCoord};
@@ -155,7 +155,7 @@ async fn handle_connection(
         }
     }
 
-    sessions.remove(&player_id);
+    sessions.remove(&player_id).await;
     tracing::info!("Connection closed: {}", addr);
 }
 
@@ -255,7 +255,7 @@ async fn handle_client_message(
     }
 }
 
-async fn broadcast_message(mut sessions: Sessions, msg: ServerMessage) {
+async fn broadcast_message(sessions: Sessions, msg: ServerMessage) {
     let count = sessions.count().await;
     tracing::debug!("Broadcasting message to {} sessions: {:?}", count, msg);
     // TODO: implement proper broadcasting

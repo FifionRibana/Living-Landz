@@ -1,4 +1,3 @@
-use shared::types::*;
 use shared::protocol::messages::BuildingData;
 
 use bevy::prelude::*;

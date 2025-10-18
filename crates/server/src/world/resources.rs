@@ -2,11 +2,9 @@
 // WORLD RESOURCES
 // =============================================================================
 
-use super::components::*;
 use bevy::prelude::*;
 use image::{DynamicImage, GenericImageView, Rgba};
 use shared::types::*;
-use sqlx::{PgPool, Row};
 
 pub const CHUNK_SIZE: u32 = 60;
 

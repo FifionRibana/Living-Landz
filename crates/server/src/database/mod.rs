@@ -5,4 +5,4 @@ pub mod queries;
 
 pub use buildings::BuildingDatabase;
 pub use chunks::ChunkDatabase;
-pub use client::{initialize_database, DatabaseClient, DatabaseCredentials};
+pub use client::initialize_database;
