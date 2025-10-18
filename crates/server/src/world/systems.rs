@@ -3,12 +3,12 @@
 // =============================================================================
 
 use super::{components::*, generation::*, resources::*};
-use crate::database::ChunkDatabase;
+use crate::database::{ChunkDatabase, BuildingDatabase};
 use rayon::prelude::*;
 use shared::protocol::messages::BuildingData;
 
 
-pub async fn generate_world_complete(db: &ChunkDatabase, map_name: &str) {
+pub async fn generate_world_complete(chunk_db: &ChunkDatabase, building_db: &BuildingDatabase, map_name: &str) {
     tracing::info!("Starting world generation...");
     let start = std::time::Instant::now();
     tracing::info!("Using map: {}", map_name);
@@ -46,7 +46,8 @@ pub async fn generate_world_complete(db: &ChunkDatabase, map_name: &str) {
     // Save to DB
     let save_start = std::time::Instant::now();
     for (i, (chunk, buildings)) in chunks.iter().enumerate() {
-        db.save_chunk(chunk).await.expect("Failed to save chunk");
+        chunk_db.save_chunk(chunk).await.expect("Failed to save chunk");
+        building_db.save_buildings(chunk.coord, buildings);
 
         if (i + 1) % 50 == 0 || i + 1 == total_chunks {
             tracing::info!("Progress: {}/{} chunks saved", i + 1, total_chunks);

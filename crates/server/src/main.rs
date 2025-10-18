@@ -53,7 +53,7 @@ async fn main() {
             .expect("Failed to clear DB");
 
         // Regénération
-        world::systems::generate_world_complete(&chunk_db, map_name).await;
+        world::systems::generate_world_complete(&chunk_db, &building_db, map_name).await;
 
         tracing::info!("=== Regeneration Complete ===");
         return;
@@ -61,7 +61,7 @@ async fn main() {
 
     if args.contains(&"--generate-world".to_string()) {
         tracing::info!("=== Starting World Generation ===");
-        world::systems::generate_world_complete(&chunk_db, map_name).await;
+        world::systems::generate_world_complete(&chunk_db, &building_db, map_name).await;
         tracing::info!("=== Generation Complete - Exiting ===");
         return;
     }

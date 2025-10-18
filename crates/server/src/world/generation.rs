@@ -60,6 +60,8 @@ impl ChunkGenerator {
             .map(|b| (b.building.coord, b))
             .collect();
         
+        tracing::info!("{} tree(s) generated!", tree_map.len());
+
         for building_data in &mut buildings.clone() {
             if let Some(ref mut tree_data) = building_data.tree_data {
                 let density = BuildingGenerator::calculate_forest_density(
