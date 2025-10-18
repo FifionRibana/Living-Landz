@@ -50,7 +50,17 @@ async fn main() {
         chunk_db
             .clear_all_chunks()
             .await
-            .expect("Failed to clear DB");
+            .expect("Failed to clear chunk DB");
+
+        building_db.clear_all_buildings()
+        .await
+        .expect("Failed to clear building DB");
+
+        if args.contains(&"--clear".to_string()) {
+            building_db.reset_database()
+            .await
+            .expect("Failed to clean building database");
+        }
 
         // Regénération
         world::systems::generate_world_complete(&chunk_db, &building_db, map_name).await;

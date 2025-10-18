@@ -40,7 +40,7 @@ impl BuildingGenerator {
 
         let noise_val = noise.sample_terrain(coord);
         if noise_val < (spawn_chance - 1.0) {
-            tracing::debug!("No tree spawn on {}, {}", coord.q, coord.r);
+            // tracing::debug!("No tree spawn on {}, {}", coord.q, coord.r);
             return None;
         }
 
@@ -84,7 +84,7 @@ impl BuildingGenerator {
             created_at: Self::timestamp(),
             last_modified: Self::timestamp(),
         };
-        tracing::debug!("Spawning tree on {}, {} (biome: {:?}, altitude: {}, age: {:?}, density: {})", coord.q, coord.r, biome, altitude, age, density);
+        // tracing::debug!("Spawning tree on {}, {} (biome: {:?}, altitude: {}, age: {:?}, density: {})", coord.q, coord.r, biome, altitude, age, density);
 
         Some(BuildingData {
             building,

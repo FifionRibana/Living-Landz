@@ -47,7 +47,7 @@ pub async fn generate_world_complete(chunk_db: &ChunkDatabase, building_db: &Bui
     let save_start = std::time::Instant::now();
     for (i, (chunk, buildings)) in chunks.iter().enumerate() {
         chunk_db.save_chunk(chunk).await.expect("Failed to save chunk");
-        building_db.save_buildings(chunk.coord, buildings);
+        building_db.save_buildings(chunk.coord, buildings).await.expect("Failed to save chunk's buildings");
 
         if (i + 1) % 50 == 0 || i + 1 == total_chunks {
             tracing::info!("Progress: {}/{} chunks saved", i + 1, total_chunks);

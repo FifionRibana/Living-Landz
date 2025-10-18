@@ -34,7 +34,7 @@ impl BuildingDatabase {
                 construction_progress REAL DEFAULT 1.0,
                 owner_id BIGINT,
                 
-                metadata JSONB,
+                metadata BYTEA,
                 
                 created_at BIGINT NOT NULL,
                 last_modified BIGINT NOT NULL
@@ -124,4 +124,29 @@ impl BuildingDatabase {
             })
             .collect())
     }
+
+    
+    pub async fn clear_all_buildings(&self) -> Result<(), sqlx::Error> {
+        tracing::warn!("🗑️  Clearing all buildings from database...");
+
+        sqlx::query("DELETE FROM buildings")
+            .execute(&self.pool)
+            .await?;
+
+        tracing::info!("✓ Database cleared");
+        Ok(())
+    }
+
+    pub async fn reset_database(&self) -> Result<(), sqlx::Error> {
+        tracing::warn!("🗑️  Droping building database...");
+        
+        sqlx::query("DROP TABLE buildings")
+            .execute(&self.pool)
+            .await?;
+
+        tracing::info!("✓ Database dropped");
+        self.init_schema();
+        Ok(())
+    }
+
 }
