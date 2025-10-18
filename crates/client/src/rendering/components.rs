@@ -7,19 +7,15 @@ pub struct HexTile {
     pub chunk_id: ChunkId,
 }
 
-#[derive(Component, Clone, Copy, PartialEq)]
-pub enum LodLevel {
-    Medium,
-}
-
 #[derive(Component, Clone)]
 pub struct HexVisuals {
     pub biome: BiomeType,
     pub tint: Color,
+    pub texture_index: usize
 }
 
 impl HexVisuals {
-    pub fn new(biome: BiomeType, coord: HexCoord) -> Self {
+    pub fn new(biome: BiomeType, coord: HexCoord, texture_index: usize) -> Self {
         // Variation de couleur basée sur coord
         let seed = (coord.q as u64).wrapping_mul(374761393)
             ^ (coord.r as u64).wrapping_mul(668265263);
@@ -34,6 +30,7 @@ impl HexVisuals {
         Self {
             biome,
             tint,
+            texture_index
         }
     }
 }

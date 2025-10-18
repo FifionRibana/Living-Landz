@@ -33,7 +33,7 @@ pub fn setup_hud(mut commands: Commands) {
                     font_size: 20.0,
                     ..default()
                 },
-                TextColor(Color::srgb(0.0, 1.0, 0.0)),
+                TextColor(Color::srgb(1.0, 0.0, 0.0)),
                 Node {
                     position_type: PositionType::Absolute,
                     top: Val::Px(10.0),

@@ -1,7 +1,7 @@
+pub mod atlas;
 pub mod components;
-pub mod materials;
+pub mod plugin;
 pub mod systems;
 
-pub use components::*;
-pub use materials::BuildingMaterials;
-pub use systems::*;
+pub use atlas::TreeAtlas;
+pub use plugin::BuildingPlugin;

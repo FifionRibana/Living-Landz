@@ -15,6 +15,6 @@ pub mod sprites;
 pub mod systems;
 
 pub use atlas::BiomeMaterials;
-pub use buildings::BuildingMaterials;
+pub use lod::{LodLevel, ViewFrustum, SpatialGrid};
 pub use hex_config::HexConfig;
 pub use plugin::RenderingPlugin;

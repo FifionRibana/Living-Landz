@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use crate::state::WorldCache;
+use super::lod::LodLevel;
 use super::{
     atlas::BiomeMaterials,
     components::*,
@@ -50,7 +51,7 @@ pub fn spawn_hex_sprites(
             let hex = tile_data.coord.to_hex();
             let world_pos = hex_config.layout.hex_to_world_pos(hex);
             
-            let visuals = HexVisuals::new(tile_data.biome, tile_data.coord);
+            let visuals = HexVisuals::new(tile_data.biome, tile_data.coord, 0);
             let material = biome_materials.get_material(tile_data.biome);
             
             commands.spawn((
